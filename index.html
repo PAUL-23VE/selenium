@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Bancaria</title>
+    <style>
+        body {
+            display: flex;
+            font-family: sans-serif;
+            margin: 0;
+            height: 100vh;
+        }
+
+        aside {
+            width: 200px;
+            background: #333;
+            color: white;
+            padding: 1em;
+        }
+
+        aside button {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        main {
+            flex: 1;
+            padding: 2em;
+            overflow-y: auto;
+        }
+
+        section {
+            display: none;
+        }
+
+        .visible {
+            display: block;
+        }
+
+        .card {
+            border: 1px solid #ccc;
+            padding: 1em;
+            margin-bottom: 1em;
+            border-radius: 8px;
+        }
+
+        input,
+        select {
+            margin-right: 10px;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+
+        .delete,
+        .edit {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .edit {
+            background-color: orange;
+        }
+
+        .deactivated {
+            background-color: #eee;
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+    <aside>
+        <button onclick="showView('clientes')">Clientes</button>
+        <button onclick="showView('cuentas')">Cuentas</button>
+        <button onclick="showView('depositos')">Depósitos</button>
+        <button onclick="showView('depositosEliminados')">Depósitos Eliminados</button>
+
+    </aside>
+    <main>
+        <section id="clientes" class="visible">
+            <h2>Gestión de Clientes</h2>
+            <input placeholder="Cédula" id="clienteCedula">
+            <input placeholder="Nombre" id="clienteNombre">
+            <input placeholder="Apellido" id="clienteApellido">
+            <input placeholder="Correo" id="clienteCorreo">
+            <input placeholder="Teléfono" id="clienteTelefono">
+            <button onclick="agregarCliente()">Agregar Cliente</button>
+            <div id="listaClientes"></div>
+        </section>
+
+        <section id="cuentas">
+            <h2>Gestión de Cuentas</h2>
+            <select id="cuentaCliente"></select>
+            <select id="cuentaTipo">
+                <option value="Ahorro">Ahorro</option>
+                <option value="Corriente">Corriente</option>
+            </select>
+            <button onclick="agregarCuenta()">Agregar Cuenta</button>
+            <div id="listaCuentas"></div>
+        </section>
+
+        <section id="depositos">
+            <h2>Gestión de Depósitos</h2>
+            <select id="depositoCuenta"></select>
+            <input type="date" id="depositoFecha">
+            <input type="number" placeholder="Monto" id="depositoMonto">
+            <button onclick="agregarDeposito()">Agregar Depósito</button>
+            <div id="listaDepositos"></div>
+        </section>
+
+        <section id="depositosEliminados">
+            <h2>Depósitos Eliminados</h2>
+            <div id="listaEliminados"></div>
+        </section>
+    </main>
+
+    <script>
+        const cache = {
+            clientes: [],
+            cuentas: [],
+            depositos: [],
+            eliminados: []
+        };
+        let editandoClienteId = null;
+
+        function showView(id) {
+            document.querySelectorAll('section').forEach(s => s.classList.remove('visible'));
+            document.getElementById(id).classList.add('visible');
+            actualizarSelects();
+        }
+
+        function agregarCliente() {
+            const cedula = document.getElementById('clienteCedula').value;
+            const nombre = document.getElementById('clienteNombre').value;
+            const apellido = document.getElementById('clienteApellido').value;
+            const correo = document.getElementById('clienteCorreo').value;
+            const telefono = document.getElementById('clienteTelefono').value;
+
+            if (cedula && nombre) {
+                if (editandoClienteId) {
+                    const cli = cache.clientes.find(c => c.id === editandoClienteId);
+                    cli.cedula = cedula;
+                    cli.nombre = nombre;
+                    cli.apellido = apellido;
+                    cli.correo = correo;
+                    cli.telefono = telefono;
+                    editandoClienteId = null;
+                } else {
+                    cache.clientes.push({ id: Date.now(), cedula, nombre, apellido, correo, telefono });
+                }
+                limpiarClienteForm();
+                renderClientes(); actualizarSelects();
+            }
+        }
+
+        function limpiarClienteForm() {
+            document.getElementById('clienteCedula').value = '';
+            document.getElementById('clienteNombre').value = '';
+            document.getElementById('clienteApellido').value = '';
+            document.getElementById('clienteCorreo').value = '';
+            document.getElementById('clienteTelefono').value = '';
+        }
+
+        function renderClientes() {
+            const div = document.getElementById('listaClientes');
+            div.innerHTML = '';
+            cache.clientes.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+          <strong>${c.nombre} ${c.apellido}</strong><br>
+          Cédula: ${c.cedula}<br>
+          Correo: ${c.correo}<br>
+          Teléfono: ${c.telefono}<br>
+          <button class="edit" onclick="editarCliente(${c.id})">Editar</button>
+          <button class="delete" onclick="eliminarCliente(${c.id})">Eliminar</button>
+        `;
+                div.appendChild(card);
+            });
+        }
+
+        function editarCliente(id) {
+            const c = cache.clientes.find(cli => cli.id === id);
+            document.getElementById('clienteCedula').value = c.cedula;
+            document.getElementById('clienteNombre').value = c.nombre;
+            document.getElementById('clienteApellido').value = c.apellido;
+            document.getElementById('clienteCorreo').value = c.correo;
+            document.getElementById('clienteTelefono').value = c.telefono;
+            editandoClienteId = id;
+        }
+
+        function eliminarCliente(id) {
+            cache.clientes = cache.clientes.filter(c => c.id !== id);
+            renderClientes(); actualizarSelects();
+        }
+
+        function agregarCuenta() {
+            const clienteId = document.getElementById('cuentaCliente').value;
+            const tipo = document.getElementById('cuentaTipo').value;
+            if (clienteId && tipo) {
+                cache.cuentas.push({ id: Date.now(), clienteId, tipo, activa: true });
+                renderCuentas(); actualizarSelects();
+            }
+        }
+
+        function renderCuentas() {
+            const div = document.getElementById('listaCuentas');
+            div.innerHTML = '';
+            cache.cuentas.forEach(c => {
+                const cliente = cache.clientes.find(cl => cl.id == c.clienteId);
+                const card = document.createElement('div');
+                card.className = 'card' + (c.activa ? '' : ' deactivated');
+                card.innerHTML = `
+          Cliente: ${cliente?.nombre} ${cliente?.apellido} (${cliente?.cedula})<br>
+          Tipo de cuenta: ${c.tipo}<br>
+          Estado: ${c.activa ? 'Activa' : 'Desactivada'}<br>
+          <button class="delete" onclick="desactivarCuenta(${c.id})">${c.activa ? 'Desactivar' : 'Activar'}</button>
+        `;
+                div.appendChild(card);
+            });
+        }
+
+        function desactivarCuenta(id) {
+            const c = cache.cuentas.find(c => c.id === id);
+            c.activa = !c.activa;
+            renderCuentas(); actualizarSelects();
+        }
+
+        function agregarDeposito() {
+            const cuentaId = document.getElementById('depositoCuenta').value;
+            const fecha = document.getElementById('depositoFecha').value;
+            const monto = document.getElementById('depositoMonto').value;
+            const cuenta = cache.cuentas.find(c => c.id == cuentaId);
+            if (cuenta && cuenta.activa && fecha && monto) {
+                cache.depositos.push({ id: Date.now(), cuentaId, fecha, monto });
+                renderDepositos();
+            } else {
+                alert("No se puede depositar en una cuenta desactivada.");
+            }
+        }
+
+        function renderDepositos() {
+            const div = document.getElementById('listaDepositos');
+            div.innerHTML = '';
+            cache.depositos.forEach(d => {
+                const cuenta = cache.cuentas.find(c => c.id == d.cuentaId);
+                const cliente = cache.clientes.find(c => c.id == cuenta?.clienteId);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+          Cliente: ${cliente?.nombre} ${cliente?.apellido}<br>
+          Cuenta: ${cuenta?.tipo}<br>
+          Fecha: ${d.fecha}<br>
+          Monto: $${d.monto}<br>
+          <button class="delete" onclick="eliminarDeposito(${d.id})">Eliminar</button>
+        `;
+                div.appendChild(card);
+            });
+        }
+
+        function eliminarDeposito(id) {
+            const eliminado = cache.depositos.find(d => d.id === id);
+            const ahora = new Date();
+            cache.eliminados.push({ ...eliminado, eliminadoEn: ahora.toLocaleString() });
+            cache.depositos = cache.depositos.filter(d => d.id !== id);
+            renderDepositos();
+            renderEliminados();
+        }
+        function renderEliminados() {
+            const div = document.getElementById('listaEliminados');
+            div.innerHTML = '';
+            cache.eliminados.forEach(d => {
+                const cuenta = cache.cuentas.find(c => c.id == d.cuentaId);
+                const cliente = cache.clientes.find(c => c.id == cuenta?.clienteId);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+      Cliente: ${cliente?.nombre} ${cliente?.apellido}<br>
+      Cuenta: ${cuenta?.tipo}<br>
+      Fecha depósito: ${d.fecha}<br>
+      Monto: $${d.monto}<br>
+      Eliminado el: ${d.eliminadoEn}
+    `;
+                div.appendChild(card);
+            });
+        }
+
+
+        function actualizarSelects() {
+            const clienteSel = document.getElementById('cuentaCliente');
+            clienteSel.innerHTML = '';
+            cache.clientes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.nombre} ${c.apellido}`;
+                clienteSel.appendChild(opt);
+            });
+
+            const cuentaSel = document.getElementById('depositoCuenta');
+            cuentaSel.innerHTML = '';
+            cache.cuentas.filter(c => c.activa).forEach(c => {
+                const cl = cache.clientes.find(x => x.id == c.clienteId);
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${cl?.nombre} ${cl?.apellido} - ${c.tipo}`;
+                cuentaSel.appendChild(opt);
+            });
+        }
+    </script>
+</body>
+
+</html>
